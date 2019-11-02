@@ -1,0 +1,28 @@
+{
+  "name": "helm-language-server",
+  "version": "0.1.0",
+  "description": "Helm language server",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest --coverage",
+    "test:debug": "node --inspect --inspect-brk node_modules/.bin/jest --coverage",
+    "start": "npm run build:live",
+    "build": "tsc -p .",
+    "build:live": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/index.ts"
+  },
+  "author": "Alexey Aksenov",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^24.0.20",
+    "@types/node": "^12.11.5",
+    "jest": "^24.9.0",
+    "nodemon": "^1.19.4",
+    "portscanner": "^2.2.0",
+    "ts-jest": "^24.1.0",
+    "ts-node": "^8.4.1",
+    "typescript": "^3.6.4"
+  },
+  "dependencies": {
+    "vscode-languageserver": "^5.2.1"
+  }
+}
