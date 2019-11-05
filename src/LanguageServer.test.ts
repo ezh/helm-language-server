@@ -52,7 +52,7 @@ describe('initialization handshake', () => {
       .sendRequest(InitializeRequest.type, {
         capabilities: {},
         processId: process.pid,
-        rootUri: '/',
+        rootUri: 'file:///',
         workspaceFolders: null,
       })
       .then((res) => {
@@ -175,3 +175,4 @@ describe('initialization handshake', () => {
     )
   })
 })
+
