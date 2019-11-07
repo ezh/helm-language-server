@@ -23,6 +23,11 @@
     "typescript": "^3.6.4"
   },
   "dependencies": {
-    "vscode-languageserver": "^5.2.1"
+    "vscode-languageserver": "^5.2.1",
+    "yaml-language-server": "^0.5.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ezh/helm-language-server.git"
   }
 }

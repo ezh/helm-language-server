@@ -9,7 +9,25 @@ import {
   ProposedFeatures,
   TextDocuments,
   createConnection,
-} from 'vscode-languageserver';
+} from 'vscode-languageserver'
+import { join, resolve } from 'path'
+import { spawn } from 'child_process'
+import {
+  IPCMessageReader,
+  IPCMessageWriter,
+} from 'vscode-languageserver'
+import {
+  Trace,
+  createProtocolConnection,
+} from 'vscode-languageserver-protocol'
+
+import { Base } from "./Base"
+import { Logger } from './Logger'
+import { Tracer } from './Tracer'
+import { onExit } from './event/onExit'
+import { onInitialize } from './event/onInitialize'
+import { onShutdown } from './event/onShutdown'
+
 
 /**
  * Helm language server
@@ -17,21 +35,23 @@ import {
  * @export
  * @class LanguageServer
  */
-export class LanguageServer {
-  // Create a connection for the server.
-  public readonly connection: IConnection
+export class LanguageServer extends
+  onExit(
+    onShutdown(
+      onInitialize(
+        Base))) {
+  // Helm language server logger
+  public readonly logger = new Logger("helm-language-server")
   // Create a simple text document manager. The text document manager
   // supports full document sync only
   public readonly documents: TextDocuments = new TextDocuments()
-  // Shutdown flag
-  shouldShutdown = false
 
 
   /**
    * Constructor
    */
-  constructor(private initialConnection: IConnection = LanguageServer.createConnection()) {
-    this.connection = initialConnection
+  constructor(public readonly connection: IConnection = LanguageServer.createConnection()) {
+    super()
   }
   /**
    * Create LanguageServer connection
@@ -41,34 +61,11 @@ export class LanguageServer {
       return createConnection(ProposedFeatures.all)
     return createConnection()
   }
-
   startedInSTDIOMode() {
-    debugger
     let args = process.argv;
     if (args)
       return args.some((arg) => /^--stdio/.test(arg))
     return false;
-  }
-  /**
-   * A notification to ask the server to exit its process.
-   */
-  onExit() {
-    console.log('Exit Helm language server')
-    this.connection.sendNotification('window/showMessage', {
-      type: MessageType.Info,
-      message: 'Helm language server exited'
-    })
-    if (this.shouldShutdown) {
-      process.exit()
-    } else {
-      process.exit(1)
-    }
-  }
-  /**
-   * Asks the server to shut down, but to not exit.
-   */
-  onShutdown() {
-    console.log('Shutdown Helm language server')
   }
   /**
    * Run Helm language server
@@ -77,10 +74,38 @@ export class LanguageServer {
    */
   public run() {
     if (this.startedInSTDIOMode()) {
-      console.log = this.connection.console.log.bind(this.connection.console)
       console.error = this.connection.console.error.bind(this.connection.console)
+      console.info = this.connection.console.info.bind(this.connection.console)
+      console.log = this.connection.console.log.bind(this.connection.console)
+      console.warn = this.connection.console.warn.bind(this.connection.console)
     }
-    console.log("Run Helm language server")
+    this.logger.log("Run")
+
+    // Run yaml-language-server
+    const pathToServer = resolve(join(__dirname, '..', 'node_modules', '.bin', 'yaml-language-server'));
+    const args = [pathToServer, '--node-ipc']
+    this.yamlChild = spawn('node', args, { stdio: [null, null, null, 'ipc'] })
+    this.yamlChild.on('error', (code) => {
+      this.logger.error(`YAML process error ${code}`)
+    })
+    this.yamlChild.on('exit', (code) => {
+      this.logger.log(`YAML process exited with code ${code}`)
+    })
+    this.yamlChild.stdout.on('data', (data) => {
+      this.logger.log(`YAML stdout: ${data}`)
+    })
+    this.yamlChild.stderr.on('data', (data) => {
+      this.logger.error(`YAML stderr: ${data}`)
+    })
+    this.yaml = createProtocolConnection(
+      new IPCMessageReader(this.yamlChild),
+      new IPCMessageWriter(this.yamlChild),
+      this.logger
+    )
+    this.yaml.trace(Trace.Verbose, new Tracer(new Logger("yaml-language-server")))
+    this.yaml.listen()
+    this.logger.log(`YAML server pid is ${this.yamlChild.pid}`)
+
 
     process.on('exit', code => {
       if (code !== 0) {
@@ -90,7 +115,11 @@ export class LanguageServer {
         })
       }
     })
-    this.connection.onShutdown(this.onShutdown)
+
+
+    this.connection.onShutdown(this.onShutdown.bind(this))
+    this.connection.onInitialize(this.onInitialize.bind(this))
+    this.connection.onExit(this.onExit.bind(this))
     // Make the text document manager listen on the connection
     // for open, change and close text document events
     this.documents.listen(this.connection)
@@ -98,3 +127,4 @@ export class LanguageServer {
     this.connection.listen();
   }
 }
+
