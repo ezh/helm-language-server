@@ -21,12 +21,12 @@ function sleep(millis: number) {
 // Draw jest table at the bottom
 afterAll(async () => await sleep(250))
 
-test('should handle onInitialize', async done => {
+test('should handle onShutdown', async done => {
   const input: PassThrough = new PassThrough()
   const output: PassThrough = new PassThrough()
   const client = createProtocolConnection(new StreamMessageReader(output), new StreamMessageWriter(input), null)
   const server = new LanguageServer(createConnection(new StreamMessageReader(input), new StreamMessageWriter(output)))
-  const onInitialize = jest.spyOn(server, 'onInitialize')
+  const onShutdown = jest.spyOn(server, 'onShutdown')
   client.listen()
   server.run()
   client
@@ -43,7 +43,7 @@ test('should handle onInitialize', async done => {
     })
   server.on('stop', () => {
     console.log('LanguageServer is stopped')
-    expect(onInitialize).toHaveBeenCalledTimes(1)
+    expect(onShutdown).toHaveBeenCalledTimes(1)
     done()
   })
 })

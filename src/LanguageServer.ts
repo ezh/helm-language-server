@@ -126,7 +126,7 @@ export class LanguageServer extends
     // for open, change and close text document events
     this.documents.listen(this.connection)
     // Listen on the connection
-    this.connection.listen();
+    this.connection.listen()
   }
   public stop() {
     this.connection.dispose()

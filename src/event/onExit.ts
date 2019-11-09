@@ -20,11 +20,12 @@ export const onExit = <T extends AnyConstructor<Base>>(base: T) =>
         type: MessageType.Info,
         message: 'Helm language server exited'
       })
-      if (this.shouldShutdown) {
-        process.exit()
-      } else {
-        process.exit(1)
-      }
+      // process.exit is called by vscode-languageserver
+      //if (this.shouldShutdown) {
+      //  process.exit()
+      //} else {
+      //  process.exit(1)
+      //}
     }
   }
 

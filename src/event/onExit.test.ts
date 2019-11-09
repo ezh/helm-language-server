@@ -7,6 +7,7 @@ import { createConnection } from 'vscode-languageserver'
 import { LanguageServer } from '../LanguageServer'
 import { PassThrough } from 'stream'
 import {
+  ExitNotification,
   InitializeRequest,
   ShutdownRequest,
   StreamMessageReader,
@@ -21,12 +22,13 @@ function sleep(millis: number) {
 // Draw jest table at the bottom
 afterAll(async () => await sleep(250))
 
-test('should handle onInitialize', async done => {
+test('should handle onExit', async done => {
   const input: PassThrough = new PassThrough()
   const output: PassThrough = new PassThrough()
   const client = createProtocolConnection(new StreamMessageReader(output), new StreamMessageWriter(input), null)
   const server = new LanguageServer(createConnection(new StreamMessageReader(input), new StreamMessageWriter(output)))
-  const onInitialize = jest.spyOn(server, 'onInitialize')
+  const spy = jest.spyOn(server, 'onExit')
+  const mockExit = jest.spyOn(process, 'exit').mockImplementation(code => { throw new Error(`Exit with code ${code}`) })
   client.listen()
   server.run()
   client
@@ -39,11 +41,15 @@ test('should handle onInitialize', async done => {
     .then((res) => {
       expect(res).toHaveProperty('capabilities')
       client.sendRequest(ShutdownRequest.type)
-        .then(() => server.stop())
+        .then(() => { client.sendNotification(ExitNotification.type) })
     })
   server.on('stop', () => {
     console.log('LanguageServer is stopped')
-    expect(onInitialize).toHaveBeenCalledTimes(1)
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(mockExit).toHaveBeenCalledTimes(1)
+    expect(mockExit).toHaveBeenCalledWith(0)
+    spy.mockRestore()
+    mockExit.mockRestore()
     done()
   })
 })
