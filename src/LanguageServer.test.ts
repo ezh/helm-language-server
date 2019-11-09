@@ -27,6 +27,13 @@ import * as portscanner from 'portscanner';
 
 const pathToServer = resolve(join(__dirname, '..', 'src', 'index.ts'));
 
+function sleep(millis: number) {
+  return new Promise(resolve => setTimeout(resolve, millis));
+}
+
+// Draw jest table at the bottom
+afterAll(async () => await sleep(250))
+
 test('should run', () => {
   process.on('message', message => {
     console.log('message from parent:', message)

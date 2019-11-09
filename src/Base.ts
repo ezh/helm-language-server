@@ -7,11 +7,12 @@
 // https://www.bryntum.com/blog/the-mixin-pattern-in-typescript-all-you-need-to-know/
 
 import { ChildProcess } from 'child_process'
+import { EventEmitter } from "events";
 
 import { IConnection } from 'vscode-languageserver'
 import { ProtocolConnection, Logger } from 'vscode-languageserver-protocol'
 
-export class Base {
+export class Base extends EventEmitter {
   // Create a connection for the server
   public readonly connection: IConnection
   // Helm language server logger

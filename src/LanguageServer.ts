@@ -17,6 +17,8 @@ import {
   IPCMessageWriter,
 } from 'vscode-languageserver'
 import {
+  ExitNotification,
+  ShutdownRequest,
   Trace,
   createProtocolConnection,
 } from 'vscode-languageserver-protocol'
@@ -62,10 +64,7 @@ export class LanguageServer extends
     return createConnection()
   }
   startedInSTDIOMode() {
-    let args = process.argv;
-    if (args)
-      return args.some((arg) => /^--stdio/.test(arg))
-    return false;
+    return process.argv.indexOf('--stdio') !== -1
   }
   /**
    * Run Helm language server
@@ -90,6 +89,9 @@ export class LanguageServer extends
     })
     this.yamlChild.on('exit', (code) => {
       this.logger.log(`YAML process exited with code ${code}`)
+      this.yamlChild.removeAllListeners()
+      this.yamlChild = undefined
+      this.emit('stop')
     })
     this.yamlChild.stdout.on('data', (data) => {
       this.logger.log(`YAML stdout: ${data}`)
@@ -126,5 +128,13 @@ export class LanguageServer extends
     // Listen on the connection
     this.connection.listen();
   }
+  public stop() {
+    this.connection.dispose()
+    if (typeof this.yamlChild !== 'undefined')
+      if (this.shouldShutdown)
+        this.yaml.sendNotification(ExitNotification.type)
+      else
+        this.yaml.sendRequest(ShutdownRequest.type)
+          .then(() => { this.yaml.sendNotification(ExitNotification.type) })
+  }
 }
-
